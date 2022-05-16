@@ -570,3 +570,105 @@ CSRs requesting serving certificates for any IP or domain name.
 只有完成彻底的检查，才有可能避免有恶意的、能够访问 kubelet 客户端证书的第三方
 为任何 IP 或域名请求服务证书。
 
+<!--
+## Generating kubeconfig files for additional users {#kubeconfig-additional-users}
+-->
+## 为其他用户生成 kubeconfig 文件 {#kubeconfig-additional-users}
+
+<!--
+During cluster creation, kubeadm signs the certificate in the `admin.conf` to have
+`Subject: O = system:masters, CN = kubernetes-admin`.
+[`system:masters`](/docs/reference/access-authn-authz/rbac/#user-facing-roles)
+is a break-glass, super user group that bypasses the authorization layer (e.g. RBAC).
+Sharing the `admin.conf` with additional users is **not recommended**!
+-->
+在集群创建期间，kubeadm 使用 `Subject: O = system:masters, CN = kubernetes-admin`
+对 `admin.conf` 中的证书进行签名。
+
+[ `system:masters` ](/zh/docs/reference/access-authn-authz/rbac/#user-facing-roles)
+是一个突破性的超级用户组，它绕过了授权层（例如 RBAC）。
+
+**不推荐**与其他用户共享 `admin.conf` ！
+
+<!--
+Instead, you can use the [`kubeadm kubeconfig user`](/docs/reference/setup-tools/kubeadm/kubeadm-kubeconfig)
+command to generate kubeconfig files for additional users.
+The command accepts a mixture of command line flags and
+[kubeadm configuration](/docs/reference/config-api/kubeadm-config.v1beta3/) options.
+The generated kubeconfig will be written to stdout and can be piped to a file
+using `kubeadm kubeconfig user ... > somefile.conf`.
+-->
+相反，你可以使用 [`kubeadm kubeconfig user`](/zh/docs/reference/setup-tools/kubeadm/kubeadm-kubeconfig)
+命令为其他用户生成 kubeconfig 文件。
+
+<!--
+Example configuration file that can be used with `--config`:
+
+```yaml
+# example.yaml
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: ClusterConfiguration
+# Will be used as the target "cluster" in the kubeconfig
+clusterName: "kubernetes"
+# Will be used as the "server" (IP or DNS name) of this cluster in the kubeconfig
+controlPlaneEndpoint: "some-dns-address:6443"
+# The cluster CA key and certificate will be loaded from this local directory
+certificatesDir: "/etc/kubernetes/pki"
+```
+-->
+可与 `--config` 一起使用的示例配置文件：
+
+```yaml
+# example.yaml
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: ClusterConfiguration
+# Will be used as the target "cluster" in the kubeconfig
+clusterName: "kubernetes"
+# Will be used as the "server" (IP or DNS name) of this cluster in the kubeconfig
+controlPlaneEndpoint: "some-dns-address:6443"
+# The cluster CA key and certificate will be loaded from this local directory
+certificatesDir: "/etc/kubernetes/pki"
+```
+
+<!--
+Make sure that these settings match the desired target cluster settings.
+To see the settings of an existing cluster use:
+
+```shell
+kubectl get cm kubeadm-config -n kube-system -o=jsonpath="{.data.ClusterConfiguration}"
+```
+-->
+确保这些设置与所需的目标集群设置相匹配。
+
+要查看现有集群的设置，请使用：
+
+```shell
+kubectl get cm kubeadm-config -n kube-system -o=jsonpath="{.data.ClusterConfiguration}"
+```
+
+<!--
+The following example will generate a kubeconfig file with credentials valid for 24 hours
+for a new user `johndoe` that is part of the `appdevs` group:
+
+```shell
+kubeadm kubeconfig user --config example.yaml --org appdevs --client-name johndoe --validity-period 24h
+```
+-->
+以下示例将为属于 `appdevs` 组的新用户 `johndoe` 生成一个具有 24 小时有效凭证的 kubeconfig 文件：
+
+```shell
+kubeadm kubeconfig user --config example.yaml --org appdevs --client-name johndoe --validity-period 24h
+```
+
+<!--
+The following example will generate a kubeconfig file with administrator credentials valid for 1 week:
+
+```shell
+kubeadm kubeconfig user --config example.yaml --client-name admin --validity-period 168h
+```
+-->
+以下示例将生成一个管理员凭据有效期为 1 周的 kubeconfig 文件：
+
+```shell
+kubeadm kubeconfig user --config example.yaml --client-name admin --validity-period 168h
+```
